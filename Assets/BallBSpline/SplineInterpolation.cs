@@ -16,7 +16,7 @@ public class SplineInterpolation : MonoBehaviour {
         keyballs = new Vector4[nPoints];
         for(int i=0; i < nPoints; i++)
         {
-            //keyballs[i] = new Vector4(Random.Range(0.0f, 5.0f), Random.Range(0.0f, 5.0f), Random.Range(0.0f, 5.0f), Random.Range(0.1f, 0.5f));
+            keyballs[i] = new Vector4(Random.Range(0.0f, 5.0f), Random.Range(0.0f, 5.0f), Random.Range(0.0f, 5.0f), Random.Range(0.1f, 0.7f));
             keyballs[i] = new Vector4(i,i,i, 0.4f);
         }
 
@@ -53,7 +53,7 @@ public class SplineInterpolation : MonoBehaviour {
 
             for (int j=0; j < segments.Length; j++)
             {
-                addMarker(segments[j], j);
+                //addMarker(segments[j], vertexCounter, Color.green);
                 vertices[vertexCounter] = segments[j];
                 uvs[vertexCounter] = new Vector2(j%2, i%2);
                 vertexCounter++;
@@ -64,14 +64,8 @@ public class SplineInterpolation : MonoBehaviour {
                 int firstPrevious = vertexCounter - segments.Length * 2;
                 int first = vertexCounter - segments.Length;
                 for(int j=0; j < segments.Length; j++) {
-                    triangles[triangleIdx] = firstPrevious + j % nCirclePolypoints;
-                    triangles[triangleIdx+1] = first + j % nCirclePolypoints;
-                    triangles[triangleIdx + 2] = first + (1 + j) % nCirclePolypoints;
-                    triangleIdx += 3;
-                    triangles[triangleIdx] = firstPrevious + j % nCirclePolypoints;
-                    triangles[triangleIdx + 1] = first + (1 + j) % nCirclePolypoints;
-                    triangles[triangleIdx + 2] = firstPrevious + (1 + j) % nCirclePolypoints;
-                    triangleIdx += 3;
+                    addTriangle(ref triangles, ref triangleIdx, firstPrevious + j % nCirclePolypoints, first + j % nCirclePolypoints, first + (1 + j) % nCirclePolypoints);
+                    addTriangle(ref triangles, ref triangleIdx, firstPrevious + j % nCirclePolypoints, first + (1 + j) % nCirclePolypoints, firstPrevious + (1 + j) % nCirclePolypoints);
                 }
 
             }
@@ -88,9 +82,9 @@ public class SplineInterpolation : MonoBehaviour {
         Vector4 end_dc = dinterpolation[dinterpolation.Length-1];
         Debug.Log("Adding front cap");
         // inverse normal, as it points towardfs the direction of the spline and we wanna go backwards.
-        addSphericalCap(ref m, new Vector3(start_c.x, start_c.y, start_c.z), -new Vector3(start_dc.x, start_dc.y, start_dc.z), start_c.w, firstBasis, ref triangleIdx, ref vertexCounter, 0);
-        Debug.Log("Adding back cap");
-        addSphericalCap(ref m, new Vector3(end_c.x, end_c.y, end_c.z), new Vector3(end_dc.x, end_dc.y, end_dc.z), end_c.w, lastBasis, ref triangleIdx, ref vertexCounter, vertexCounter - getSphericalCapSize());
+        addSphericalCap(ref m, new Vector3(start_c.x, start_c.y, start_c.z), new Vector3(start_dc.x, start_dc.y, start_dc.z), -1, start_c.w, firstBasis, ref triangleIdx, ref vertexCounter, 0);
+        Debug.Log("Adding back cap");                                                                                                                                                  // the end of the tube points        - one ring
+        addSphericalCap(ref m, new Vector3(end_c.x, end_c.y, end_c.z), new Vector3(end_dc.x, end_dc.y, end_dc.z), 1, end_c.w, lastBasis, ref triangleIdx, ref vertexCounter, vertexCounter - getSphericalCapSize()-nCirclePolypoints);
 
         GetComponent<MeshFilter>().mesh = m;
 
@@ -226,24 +220,17 @@ public class SplineInterpolation : MonoBehaviour {
         return center + radius * (basis1 * Mathf.Cos(theta) + basis2 * Mathf.Sin(theta));
     }
 
-    private void testSphereCap()
+    private void addMarker(Vector3 point, int idx, Color col)
     {
-        Vector3[] p  = calculateSphereCap(new Vector3(0, 0, 0), Vector3.forward, 1.0f);
-        int i = 0;
-        foreach(Vector3 point in p)
-        {
-            addMarker(point, i);
-            i++;
-        }
+        addMarker(point, ""+idx, col);
     }
 
-    private void addMarker(Vector3 point, int idx)
+    private void addMarker(Vector3 point, string label, Color col)
     {
             GameObject sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             sphere.transform.position = point;
             sphere.transform.localScale = new Vector3(0.05f, 0.05f, 0.05f);
-            sphere.name = "Cap";
-            Color col = Color.green;
+            sphere.name = "Cap "+label;
             setColor(sphere, col);
             sphere.transform.parent = gameObject.transform;
 
@@ -257,14 +244,14 @@ public class SplineInterpolation : MonoBehaviour {
             //meshRendererComponent.materials = new Material[1];
 
             // Set the text string of the TextMesh component (it works according to the inspector)
-            textMeshComponent.text = "" + idx;
+            textMeshComponent.text = label;
             textMeshComponent.characterSize = 0.02f;
             textMeshComponent.fontSize = 20;
     }
 
-    private void addSphericalCap(ref Mesh m, Vector3 center, Vector3 normal, float radius, Vector3 basis, ref int triangleIdx, ref int VertexIdx, int connectToIdx)
+    private void addSphericalCap(ref Mesh m, Vector3 center, Vector3 normal, int spin, float radius, Vector3 basis, ref int triangleIdx, ref int VertexIdx, int connectToIdx)
     {
-        Debug.Log("starting Cap at: "+connectToIdx+", existing vertices: " + VertexIdx);
+        //Debug.Log("starting Cap at: "+connectToIdx+", existing vertices: " + VertexIdx);
 
         Vector3[] points = m.vertices;
         Vector2[] uvs = m.uv;
@@ -273,7 +260,7 @@ public class SplineInterpolation : MonoBehaviour {
         for (int j = VertexIdx+1; j < points.Length; j++) points[j] = new Vector3(0, 0, 0);
 
 
-        normal.Normalize(); normal = -normal;
+        normal.Normalize();
         Vector3 basis2 = Vector3.Cross(normal, basis);
         Vector3 basis1 = Vector3.Cross(normal, basis2);
 
@@ -282,84 +269,83 @@ public class SplineInterpolation : MonoBehaviour {
         int i = 0;
 
         // forwards cap
-        //for (int angle1 = nCirclePolypoints / 2; angle1 >= 0; angle1--)
-        // backwards cap
-        for (int angle1 = 0; angle1 <= nCirclePolypoints / 2; angle1++)
+        for (int angle1 = nCirclePolypoints / 2; angle1 >= 0; angle1--)
             {
             bool rowSet = false;
             for (int angle2 = 0; angle2 < nCirclePolypoints; angle2++)
             {
-                float theta = Mathf.PI + 2 * Mathf.PI / nCirclePolypoints * angle2;
-                float omega = 2 * Mathf.PI / nCirclePolypoints * angle1;
-                
+                float theta = Mathf.PI + 2 * Mathf.PI / nCirclePolypoints * angle2; // runs [0 2Pi]
+                float omega = 2 * Mathf.PI / nCirclePolypoints * angle1; // runs [0 Pi]
+
+                int thetaDegree = (int)((theta * 180 / Mathf.PI) % 360);
+                int omegaDegree = (int)((omega * 180 / Mathf.PI) % 360);
+
                 if (Mathf.Cos(omega) <= 0)
                 {
-                    //Debug.Log("T:" + theta * 180 / Mathf.PI + ", O:" + omega * 180 / Mathf.PI);
-                    // Place the tip point
-                    if (!tipPlaced && (angle1 == nCirclePolypoints / 2)) // || angle1 == (nCirclePolypoints / 2) - 1
-                    {
+                    continue;
+                }
+                //Debug.Log("T:" + theta * 180 / Mathf.PI + ", O:" + omega * 180 / Mathf.PI);
+                // Place the tip point
+                if (!tipPlaced && (angle1 == nCirclePolypoints / 2 || angle1 == 0))
+                {
                         tipPlaced = true;
-                        points[VertexIdx + i] = calculatePointOnSphere(center, normal, radius, theta, omega, basis1, basis2);
+                        points[VertexIdx + i] = calculatePointOnSphere(center, normal, spin, radius, theta, omega, basis1, basis2);
 
                         for (int k=0; k < nCirclePolypoints; k++) {
                             
-                        triangles[triangleIdx + 2] = connectToIdx + i + k;
-                        triangles[triangleIdx + 1] = VertexIdx + i;
                             if (k == nCirclePolypoints - 1)
                             {
-                                triangles[triangleIdx + 0] = connectToIdx + i + 1 + k- nCirclePolypoints;
+                                addTriangle(ref triangles, ref triangleIdx, connectToIdx + i + k, VertexIdx + i, connectToIdx + i + 1 + k - nCirclePolypoints, spin);
                             }
                             else
                             {
-                                triangles[triangleIdx + 0] = connectToIdx + i + 1 + k;
+                                addTriangle(ref triangles, ref triangleIdx, connectToIdx + i + k, VertexIdx + i, connectToIdx + i + 1 + k, spin);
                             }
 
-                            triangleIdx += 3;
                         }
 
-                        addMarker(points[VertexIdx + i], i);
-
+                        //addMarker(points[VertexIdx + i], i+"(" + thetaDegree + "," + omegaDegree + ")", ColorAssistant.getQualitativeColor(angle1));
 
                         uvs[VertexIdx + i] = new Vector2(angle2%2, angle1%2);
                         i++;
                     }
                     // all other sphere points
-                    if (angle1 != nCirclePolypoints / 2)
+                    if (angle1 != nCirclePolypoints / 2 && angle1 != 0)
                     {
                         // generate the new point
-                        points[VertexIdx + i] = calculatePointOnSphere(center, normal, radius, theta, omega, basis1, basis2);
+                        points[VertexIdx + i] = calculatePointOnSphere(center, normal, spin, radius, theta, omega, basis1, basis2);
 
-                        addMarker(points[VertexIdx + i], i);
+                        //addMarker(points[VertexIdx+i], i+"(" + thetaDegree + "," + omegaDegree + ")", ColorAssistant.getQualitativeColor(angle1));
 
                         uvs[VertexIdx + i] = new Vector2(angle2 % 2, angle1 % 2);
-                        // connect points
-                        // first non-cap point
-                        //TODO will always connect to the end, not to the start
-                        // points[i] points[getSphericalCapSize() + i] points[getSphericalCapSize()+ i + 1]
-                        //Debug.Log("Tri: " + (connectToIdx + i) + ", " + (VertexIdx + i) + ", " + (connectToIdx + i + 1));
-                        triangles[triangleIdx + 2] = connectToIdx + i;
-                        triangles[triangleIdx + 1] = VertexIdx + i;
-                        triangles[triangleIdx + 0] = connectToIdx + i + 1;
-                        triangleIdx += 3;
+                    // connect points
 
-                        // points[i-1] points[getSphericalCapSize() + i] points[i]
-                        if (i > 0 )
+                    // The first circle that connects cap and tube is special :-/
+
+                    if (i != 0 )  // first point
                         {
-                            //Debug.Log("Tri: " + (VertexIdx + i) + ", " + (connectToIdx + i) + ", " + (VertexIdx + i - 1));
-                            triangles[triangleIdx + 2] = VertexIdx + i;
-                            triangles[triangleIdx + 1] = connectToIdx + i;
-                            triangles[triangleIdx + 0] = VertexIdx + i - 1;
-                            triangleIdx += 3;
+                            addTriangle(ref triangles, ref triangleIdx, VertexIdx + i, connectToIdx + i, VertexIdx + i - 1, spin);
                         }
+                    if (i != nCirclePolypoints - 1) // last point
+                    {
+                        addTriangle(ref triangles, ref triangleIdx, connectToIdx + i, VertexIdx + i, connectToIdx + i + 1, spin);
+                    }
 
-                        //}
+                    // close the first circle at the last point
+                    if (i == nCirclePolypoints-1)
+                    {
+                        addTriangle(ref triangles, ref triangleIdx, VertexIdx, connectToIdx, VertexIdx + i, spin);
+                        addTriangle(ref triangles, ref triangleIdx, connectToIdx, connectToIdx+i, VertexIdx + i, spin);
+                    }
+
+                    // is the row complete?
                         if(angle2 ==nCirclePolypoints-1)
                             rowSet = true;
 
                         i++;
                     }
 
-                }
+                
 
             }
             if (rowSet)
@@ -367,7 +353,7 @@ public class SplineInterpolation : MonoBehaviour {
                 
 
                 connectToIdx = VertexIdx - nCirclePolypoints;
-                Debug.Log("Jump to: " + (connectToIdx+i) + " vertices: "+ (VertexIdx+i));
+                //Debug.Log("Jump to: " + (connectToIdx+i) + " vertices: "+ (VertexIdx+i));
             }
         }
         
@@ -375,68 +361,155 @@ public class SplineInterpolation : MonoBehaviour {
         m.triangles = triangles;
         m.uv = uvs;
 
-        Debug.Log("i was: " + i + " of cap size: " + getSphericalCapSize());
-        VertexIdx += i+1; // index of next element to insert
+        //Debug.Log("i was: " + i + " of cap size: " + getSphericalCapSize());
+        VertexIdx += i; // index of next element to insert
 
+    }
+
+    private void addTriangle(ref int[] triangles, ref int triangleIdx, int c1, int c2, int c3, int spin = 1)
+    {
+        if (spin == 1)
+        {
+            triangles[triangleIdx + 0] = c1;
+            triangles[triangleIdx + 1] = c2;
+            triangles[triangleIdx + 2] = c3;
+            triangleIdx += 3;
+        }
+        if (spin == -1)
+        {
+            triangles[triangleIdx + 2] = c1;
+            triangles[triangleIdx + 1] = c2;
+            triangles[triangleIdx + 0] = c3;
+            triangleIdx += 3;
+        }
     }
 
     private int getSphericalCapSize()
     {
-
-        if ((nCirclePolypoints / 2) % 2 == 0)
-        {
-            return (nCirclePolypoints / 2) * (nCirclePolypoints / 2) - (nCirclePolypoints / 2 - 1) - (nCirclePolypoints / 2);
-        }
-        else
-        {
-            return (nCirclePolypoints ) * (nCirclePolypoints / 2) - (nCirclePolypoints / 2 - 1);
-        }
-
-        
+        int nFullRings = Mathf.FloorToInt((nCirclePolypoints - 2) / 2);
+        int nFullSphere = nFullRings * nCirclePolypoints + 2;
+        return nFullSphere / 2;
     }
 
-    private Vector3[] calculateSphereCap(Vector3 center, Vector3 normal, float radius)
+    private Vector3[] calculateSphere(Vector3 center, float radius)
     {
-        Vector3[] points = new Vector3[getSphericalCapSize()];
+        Vector3[] points = new Vector3[getSphericalCapSize()*2]; // the full sphere consists of two caps
         for (int j = 0; j < points.Length; j++) points[j] = new Vector3(0, 0, 0);
         Vector3 basis1 = Vector3.up;
         Vector3 basis2 = Vector3.right;
-        normal = Vector3.forward;
+        Vector3 normal = Vector3.forward;
+        int spin = 1;
+
+
         bool tipPlaced = false; // the very tip of the spherical cap is just one point, not a whole circle.
 
         int i = 0;
-        
-            for (int a2 = nCirclePolypoints / 2; a2 >=0; a2--)
+
+        for (int angle1 = nCirclePolypoints / 2; angle1 >= 0; angle1--)
+        {
+            for (int angle2 = 0; angle2 < nCirclePolypoints; angle2++)
             {
-            for (int a1 = 0; a1 < nCirclePolypoints; a1++)
-            {
-                float theta = 2 * Mathf.PI / nCirclePolypoints * a1;
-                float omega = 2 * Mathf.PI / nCirclePolypoints * a2;
-                if(Mathf.Cos(omega)>= 0) {
-                    // Place the tip point
-                    if (!tipPlaced && (a2 == 0 || a2 == (nCirclePolypoints/2)-1))
+                float theta = Mathf.PI + 2 * Mathf.PI / nCirclePolypoints * angle2; // runs [0 2Pi]
+                float omega = 2 * Mathf.PI / nCirclePolypoints * angle1; // runs [0 Pi]
+
+                int thetaDegree = (int)((theta * 180 / Mathf.PI) % 360);
+                int omegaDegree = (int)((omega * 180 / Mathf.PI) % 360);
+
+                //Debug.Log("T:" + theta * 180 / Mathf.PI + ", O:" + omega * 180 / Mathf.PI);
+                // Place the tip point
+                if (!tipPlaced && (angle1 == nCirclePolypoints / 2 || angle1 == 0)) 
                     {
                         tipPlaced = true;
-                        points[i] = calculatePointOnSphere(center, normal, radius, theta, omega, basis1, basis2);
+                        points[i] = calculatePointOnSphere(center, normal, spin, radius, theta, omega, basis1, basis2);
+
+                        addMarker(points[i], i+"(" + thetaDegree + "," + omegaDegree + ")", ColorAssistant.getQualitativeColor(angle1));
                         i++;
                     }
                     // all other sphere points
-                    if (a2 != 0) {
-                        points[i] = calculatePointOnSphere(center, normal, radius, theta, omega, basis1, basis2);
+                    if (angle1 != nCirclePolypoints / 2 && angle1 != 0)
+                    {
+                        // generate the new point
+                        points[i] = calculatePointOnSphere(center, normal, spin, radius, theta, omega, basis1, basis2);
+
+                    
+                        addMarker(points[i], i+"("+ thetaDegree+","+omegaDegree+")", ColorAssistant.getQualitativeColor(angle1));
+                        tipPlaced = false;
                         i++;
                     }
-                    
-                }
-                
+
             }
         }
-        Debug.Log(i);
+        Debug.Log("Constructed "+i+"/"+ getSphericalCapSize()*2+" points.");
         return points;
     }
 
-    private Vector3 calculatePointOnSphere(Vector3 center, Vector3 normal, float radius, float theta, float omega, Vector3 basis1, Vector3 basis2)
+    private void testSphereCap()
     {
-        return center + radius * (basis1 * Mathf.Cos(theta) * Mathf.Sin(omega) + basis2 * Mathf.Sin(theta) * Mathf.Sin(omega) + normal * Mathf.Cos(omega) );
+        // front cap
+        calculateSphereCap(new Vector3(0, 0, -0.2f), Vector3.forward, -1.0f, 1.0f, Vector3.right);
+        // back cap
+        calculateSphereCap(new Vector3(0, 0,  0.2f), Vector3.forward,  1.0f, 1.0f, Vector3.right);
+    }
+
+    private Vector3[] calculateSphereCap(Vector3 center, Vector3 normal, float spin, float radius, Vector3 basis)
+    {
+        Vector3[] points = new Vector3[getSphericalCapSize()]; // the full sphere consists of two caps
+        for (int j = 0; j < points.Length; j++) points[j] = new Vector3(0, 0, 0);
+
+        normal.Normalize(); 
+        Vector3 basis2 = Vector3.Cross(normal, basis);
+        Vector3 basis1 = Vector3.Cross(normal, basis2);
+
+        bool tipPlaced = false; // the very tip of the spherical cap is just one point, not a whole circle.
+
+        int i = 0;
+
+        for (int angle1 = nCirclePolypoints / 2; angle1 >= 0; angle1--)
+        {
+            for (int angle2 = 0; angle2 < nCirclePolypoints; angle2++)
+            {
+                float theta = Mathf.PI + 2 * Mathf.PI / nCirclePolypoints * angle2; // runs [0 2Pi]
+                float omega = 2 * Mathf.PI / nCirclePolypoints * angle1; // runs [0 Pi]
+
+                if (Mathf.Cos(omega) <= 0)
+                {
+                    continue;
+                }
+
+                int thetaDegree = (int)((theta * 180 / Mathf.PI) % 360);
+                int omegaDegree = (int)((omega * 180 / Mathf.PI) % 360);
+
+                //Debug.Log("T:" + theta * 180 / Mathf.PI + ", O:" + omega * 180 / Mathf.PI);
+                // Place the tip point
+                if (!tipPlaced && (angle1 == nCirclePolypoints / 2 || angle1 == 0))
+                {
+                    tipPlaced = true;
+                    points[i] = calculatePointOnSphere(center, normal, spin, radius, theta, omega, basis1, basis2);
+
+                    addMarker(points[i], i+"(" + thetaDegree + "," + omegaDegree + ")", ColorAssistant.getQualitativeColor(angle1));
+                    i++;
+                }
+                // all other sphere points
+                if (angle1 != nCirclePolypoints / 2 && angle1 != 0)
+                {
+                    // generate the new point
+                    points[i] = calculatePointOnSphere(center, normal, spin, radius, theta, omega, basis1, basis2);
+
+
+                    addMarker(points[i], i+"(" + thetaDegree + "," + omegaDegree + ")", ColorAssistant.getQualitativeColor(angle1));
+                    tipPlaced = false;
+                    i++;
+                }
+
+            }
+        }
+        Debug.Log("Constructed " + i + "/" + getSphericalCapSize() + " points.");
+        return points;
+    }
+
+    private Vector3 calculatePointOnSphere(Vector3 center, Vector3 normal, float spin, float radius, float theta, float omega, Vector3 basis1, Vector3 basis2)
+    {
+        return center + radius * (basis1 * Mathf.Cos(theta) * Mathf.Sin(omega) + basis2 * Mathf.Sin(theta) * Mathf.Sin(omega) + normal * spin * Mathf.Cos(omega) );
     }
 
 }

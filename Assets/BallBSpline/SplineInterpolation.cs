@@ -1,24 +1,25 @@
 ﻿using UnityEngine;
-using System.Collections;
 
 public class SplineInterpolation : MonoBehaviour {
 
-    public Vector4[] keyballs;
+    
     public int interpolationDensity = 200; // todo make this depend on length of the trajectory
+    [Range(5, 20)]
     public int nCirclePolypoints = 10;
+    [Range(0.0f, 5.0f)]
+    public float CapPointiness = 1.0f;
+
+    private Vector4[] keyballs;
     private Vector4[] interpolation, dinterpolation, ddinterpolation;
 
     // Use this for initialization
     void Start () {
         // Create the data to be fitted
 
-        int nPoints = 2;
-        keyballs = new Vector4[nPoints];
-        for(int i=0; i < nPoints; i++)
-        {
-            keyballs[i] = new Vector4(Random.Range(0.0f, 5.0f), Random.Range(0.0f, 5.0f), Random.Range(0.0f, 5.0f), Random.Range(0.1f, 0.7f));
-            keyballs[i] = new Vector4(i,i,i, 0.4f);
-        }
+        //initKeyballsRandom(3);
+        //initKeyballsLinear(2);
+        //initKeyballsDemo();
+        initKeyballsSnake(5, 2);
 
         CubicSpline.FitParametric(keyballs, interpolationDensity, out interpolation, out dinterpolation, out ddinterpolation);
 
@@ -27,6 +28,49 @@ public class SplineInterpolation : MonoBehaviour {
         //visualizeHull();
         meshify();
         //testSphereCap();
+    }
+
+    private void initKeyballsRandom(int n)
+    {
+        keyballs = new Vector4[n];
+        for (int i = 0; i < n; i++)
+        {
+            keyballs[i] = new Vector4(Random.Range(0.0f, 5.0f), Random.Range(0.0f, 5.0f), Random.Range(0.0f, 5.0f), Random.Range(0.1f, 0.7f));
+        }
+    }
+
+    private void initKeyballsLinear(int n)
+    {
+        keyballs = new Vector4[n];
+        for (int i = 0; i < n; i++)
+        {
+            keyballs[i] = new Vector4(i,i,i, Random.Range(0.1f, 0.7f));
+        }
+    }
+
+    private void initKeyballsDemo()
+    {
+        keyballs = new Vector4[3];
+        keyballs[0] = new Vector4(0, 0, 0, 0.1f);
+        keyballs[1] = new Vector4(1, 0, 0, 0.3f);
+        keyballs[2] = new Vector4(1, 1, 0, 0.2f);
+    }
+
+    private void initKeyballsSnake(int n, int prey)
+    {
+        keyballs = new Vector4[n];
+        for (int i = 0; i < n; i++)
+        {
+            if(i== prey)
+            {
+                keyballs[i] = new Vector4(Mathf.Cos(i * Mathf.PI), i * 3, 0.8f, 0.8f);
+            }
+            else
+            {
+                keyballs[i] = new Vector4(Mathf.Cos(i * Mathf.PI), i * 3, 0, 0.5f);
+            }
+            
+        }
     }
 
     private void meshify()
@@ -96,7 +140,7 @@ public class SplineInterpolation : MonoBehaviour {
 
     private void visualizeCenterLine()
     {
-        LineRenderer lr = initLine(Color.green, 0.1f, "BSpline");
+        LineRenderer lr = initLine(ColorAssistant.getQualitativeColor(2), 0.1f, "BSpline");
         for (int i = 0; i < interpolation.Length; i++)
         {
             extendLine(new Vector3(interpolation[i].x, interpolation[i].y, interpolation[i].z), lr, i);
@@ -111,7 +155,7 @@ public class SplineInterpolation : MonoBehaviour {
             sphere.transform.localScale = new Vector3(ball.w * 2, ball.w * 2, ball.w * 2); // radius to diameter
             sphere.transform.position = new Vector3(ball.x, ball.y, ball.z);
             sphere.name = "Keypoint";
-            Color col = Color.red;
+            Color col = ColorAssistant.getQualitativeColor(0);
             setColor(sphere, col);
             sphere.transform.parent = gameObject.transform;
         }
@@ -128,7 +172,7 @@ public class SplineInterpolation : MonoBehaviour {
 
             Vector3[] segments = calculateCircle(new Vector3(c.x, c.y, c.z), new Vector3(dc.x, dc.y, dc.z), c.w, ref lastBasis, nCirclePolypoints);
 
-            LineRenderer lr = initLine(Color.blue, 0.03f, "SurfaceRing");
+            LineRenderer lr = initLine(ColorAssistant.getQualitativeColor(1), 0.03f, "SurfaceRing");
             for (int j = 0; j < segments.Length; j++)
             {
                 extendLine(segments[j], lr, j);
@@ -141,8 +185,16 @@ public class SplineInterpolation : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-                
-	}
+        /*
+        initKeyballsSnake(5);
+
+        CubicSpline.FitParametric(keyballs, interpolationDensity, out interpolation, out dinterpolation, out ddinterpolation);
+
+        visualizeKeypoints(keyballs);
+        visualizeCenterLine();
+        visualizeHull();
+        */
+    }
 
 
     private LineRenderer initLine(Color c, float width = 0.03f, string name = "line")
@@ -152,7 +204,7 @@ public class SplineInterpolation : MonoBehaviour {
         LineRenderer lr = myLine.GetComponent<LineRenderer>();
 
         myLine.GetComponent<Renderer>().material.color = c;
-        lr.material = new Material(Shader.Find("Standard"));
+        lr.material = new Material(Shader.Find("Legacy Shaders/Bumped Specular"));
         lr.material.color = c;
         lr.SetWidth(width, width);
 
@@ -175,8 +227,9 @@ public class SplineInterpolation : MonoBehaviour {
         }
         else
         {
-            materialColored = new Material(Shader.Find("Unlit/Color"));
+            materialColored = new Material(Shader.Find("Legacy Shaders/Bumped Specular"));
         }
+        
         materialColored.color = c;
         o.GetComponent<Renderer>().material = materialColored;
     }
@@ -509,7 +562,7 @@ public class SplineInterpolation : MonoBehaviour {
 
     private Vector3 calculatePointOnSphere(Vector3 center, Vector3 normal, float spin, float radius, float theta, float omega, Vector3 basis1, Vector3 basis2)
     {
-        return center + radius * (basis1 * Mathf.Cos(theta) * Mathf.Sin(omega) + basis2 * Mathf.Sin(theta) * Mathf.Sin(omega) + normal * spin * Mathf.Cos(omega) );
+        return center + radius * (basis1 * Mathf.Cos(theta) * Mathf.Sin(omega) + basis2 * Mathf.Sin(theta) * Mathf.Sin(omega) + Mathf.Pow(CapPointiness, 2.0f)*normal * spin * Mathf.Cos(omega) );
     }
 
 }

@@ -23,10 +23,10 @@ public class SplineInterpolation : MonoBehaviour {
 
         CubicSpline.FitParametric(keyballs, interpolationDensity, out interpolation, out dinterpolation, out ddinterpolation);
 
-        //visualizeKeypoints(keyballs);
-        //visualizeCenterLine();
-        //visualizeHull();
-        meshify();
+        visualizeKeypoints(keyballs);
+        visualizeCenterLine();
+        visualizeHull();
+        //meshify();
         //testSphereCap();
     }
 

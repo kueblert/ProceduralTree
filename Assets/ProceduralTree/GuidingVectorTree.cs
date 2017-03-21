@@ -46,19 +46,23 @@ public class GuidingVectorTree : MonoBehaviour
                 // Dijkstra
                 Dijkstra paths = new Dijkstra(yao, getStemTop());
 
+                //paths.visualize();
+
                 // Endpoint placement
                 EndPointSelection.select(yao, iteration);
+
+                
             }
 
             // Visualize
 
-            sampling.visualize();
+            //sampling.visualize();
             //sampling.data.visualize();
 
             //yao.visualize();
-            //paths.visualize();
 
-            //EndPointSelection.visualize(yao);
+
+            EndPointSelection.visualize(yao);
 
             /*
             Meshifier meshGenerator = new Meshifier(yao, ElementsPerRing);

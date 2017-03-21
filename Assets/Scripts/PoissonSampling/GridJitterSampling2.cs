@@ -7,6 +7,7 @@ public class GridJitterSampling2 : PoissonSampling
     public Grid3D _data;
     private float _minDist;
     private int _nSamples;
+
     private float _cellSize;
 
     /**
@@ -21,10 +22,10 @@ public class GridJitterSampling2 : PoissonSampling
 
     private void generateGrid(float width, float height, float depth, int nSamples)
     {
-        _cellSize = -1;
-        Triple size = calculateGridSize(width, height, depth, nSamples, ref _cellSize);
-
-        _data = new Grid3D(size, _cellSize);
+        float cellSize = -1;
+        Triple size = calculateGridSize(width, height, depth, nSamples, ref cellSize);
+        _cellSize = cellSize; // save for visualization
+        _data = new Grid3D(size, cellSize);
     }
 
     private Triple calculateGridSize(float width, float height, float depth, int nSamples, ref float cellSize)
@@ -32,6 +33,14 @@ public class GridJitterSampling2 : PoissonSampling
         // This is where we differ from the instructions in the original blog post by taking the cubic root.
         // For the 2D case, use the square root.
         cellSize = Mathf.Pow((width * height * depth) / nSamples, 1.0f / 3.0f);
+
+        // check whether the resulting cell size allows for the desired minimum distance.
+        if(cellSize < _minDist)
+        {
+            // if not, reduce the number of samples
+            nSamples = Mathf.FloorToInt((width * height * depth) / Mathf.Pow(_minDist, 3.0f));
+            Debug.LogWarning("Reducing samples as the desired minimal distance cannot be met with the desired amount of samples.");
+        }
         int nX = Mathf.CeilToInt(width / cellSize);
         int nY = Mathf.CeilToInt(height / cellSize);
         int nZ = Mathf.CeilToInt(depth / cellSize);

@@ -38,11 +38,67 @@ public class Grid3D : IEnumerable<int>
 
     }
 
+    public int this[Vector3 idx]
+    {
+        get
+        {
+            // indexer
+            Triple i = imageToGrid(idx);
+            return data[i.x, i.y, i.z];
+        }
+        set
+        {
+            Triple i = imageToGrid(idx);
+            data[i.x, i.y, i.z] = value;
+        }
+
+    }
+
+    // relevant?
+    public Grid3D getSubgrid(Vector3 p, int extend)
+    {
+        Triple p_grid = imageToGrid(p);
+        Grid3D subgrid = new Grid3D(new Triple(extend, extend, extend), cellSize);
+        int centerIdx = (extend - 1) / 2 + 1;
+        for (int i = 0; i < extend; i++)
+        {
+            for (int j = 0; j < extend; j++)
+            {
+                for (int k = 0; k < extend; k++)
+                {
+                    int x = (int)p_grid.x + i - (extend - 1) / 2;
+                    int y = (int)p_grid.y + j - (extend - 1) / 2;
+                    int z = (int)p_grid.z + k - (extend - 1) / 2;
+                    if (x >= 0 && x < data.GetLength(0) && y >= 0 && y < data.GetLength(1) && z >= 0 && z < data.GetLength(2))
+                    {
+                        subgrid[i, j, k] = data[x, y, z];
+                    }
+                    else
+                    {
+                        subgrid[i, j, k] = invalid;
+                    }
+
+                }
+            }
+        }
+
+        return subgrid;
+    }
+
+    private Triple imageToGrid(Vector3 point)
+    {
+        int gridX = (int)(point.x / cellSize);
+        int gridY = (int)(point.y / cellSize);
+        int gridZ = (int)(point.z / cellSize);
+        return new Triple(gridX, gridY, gridZ);
+    }
+
+
     public IEnumerator<int> GetEnumerator()
     {
         for (int i = 0; i < data.GetLength(0); i++)
-            for (int j = 0; j < data.GetLength(0); j++)
-                for (int k = 0; k < data.GetLength(0); k++)
+            for (int j = 0; j < data.GetLength(1); j++)
+                for (int k = 0; k < data.GetLength(2); k++)
                     yield return this.data[i, j, k];
     }
 

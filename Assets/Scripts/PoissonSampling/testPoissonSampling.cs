@@ -8,16 +8,22 @@ public class testPoissonSampling : MonoBehaviour {
     public float minDist = 0.1f;
     public int nSamples = 1000;
 
+    private PoissonSampling _sampling;
+
     // Use this for initialization
     void Start () {
 
-        PoissonSampling sampling = new GridJitterSampling2(position, size , minDist, nSamples);
-        sampling.sample();
-        sampling.visualize();
+
+        //PoissonSampling sampling = new GridJitterSampling2(position, size , minDist, nSamples);
+
+        _sampling = new PoissonDiskSampling2(size.x, size.y, size.z, minDist, 30, nSamples);
+
+        _sampling.sample();
+        _sampling.visualize();
     }
 	
 	// Update is called once per frame
 	void Update () {
-	
+
 	}
 }

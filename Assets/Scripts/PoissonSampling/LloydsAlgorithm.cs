@@ -100,6 +100,75 @@ public class LloydsAlgorithm {
             
             return geometry;
         }
+
+        public Vector3 calculateCircumsphere()
+        {
+            // http://mathworld.wolfram.com/Circumsphere.html
+            Vector3 center = new Vector3();
+            center.x = Dx() / (2* a());
+            center.y = Dy() / (2 * a());
+            center.z = Dz() / (2 * a());
+
+            if(Mathf.Abs(Dx()) < 0.001f || Mathf.Abs(Dy()) < 0.001f || Mathf.Abs(Dz()) < 0.001f)
+            {
+                Debug.Log("Determinant zero");
+                return new Vector3();
+            }
+            return center;
+        }
+
+        private float a()
+        {
+            Matrix4x4 a = new Matrix4x4();
+            for(int row = 0; row < 4; row++)
+            {
+                a[row, 0] = GetPosition(row).x;
+                a[row, 1] = GetPosition(row).y;
+                a[row, 2] = GetPosition(row).z;
+                a[row, 3] = 1.0f;
+            }
+            return a.determinant;
+        }
+
+        private float Dx()
+        {
+            Matrix4x4 D = new Matrix4x4();
+            for (int row = 0; row < 4; row++)
+            {
+                D[row, 0] = GetPosition(row).x* GetPosition(row).x+ GetPosition(row).y* GetPosition(row).y+ GetPosition(row).z* GetPosition(row).z;
+                D[row, 1] = GetPosition(row).y;
+                D[row, 2] = GetPosition(row).z;
+                D[row, 3] = 1.0f;
+            }
+            return D.determinant;
+        }
+
+        private float Dy()
+        {
+            Matrix4x4 D = new Matrix4x4();
+            for (int row = 0; row < 4; row++)
+            {
+                D[row, 0] = GetPosition(row).x * GetPosition(row).x + GetPosition(row).y * GetPosition(row).y + GetPosition(row).z * GetPosition(row).z;
+                D[row, 1] = GetPosition(row).x;
+                D[row, 2] = GetPosition(row).z;
+                D[row, 3] = 1.0f;
+            }
+            return -D.determinant;
+        }
+
+        private float Dz()
+        {
+            Matrix4x4 D = new Matrix4x4();
+            for (int row = 0; row < 4; row++)
+            {
+                D[row, 0] = GetPosition(row).x * GetPosition(row).x + GetPosition(row).y * GetPosition(row).y + GetPosition(row).z * GetPosition(row).z;
+                D[row, 1] = GetPosition(row).x;
+                D[row, 2] = GetPosition(row).y;
+                D[row, 3] = 1.0f;
+            }
+            return D.determinant;
+        }
+
     }
 
     private GameObject _voronoi;
@@ -126,8 +195,8 @@ public class LloydsAlgorithm {
         //_delaunay = new GameObject("Delaunay");
 
         //visualizeVertices(voronoi);
-        //visualizeEdges(voronoi);
-        visualizeCells(voronoi);
+        visualizeEdges(voronoi);
+        //visualizeCells(voronoi);
 
         //visualizeVertices(delaunay);
         //visualizeEdges(delaunay);
@@ -135,6 +204,39 @@ public class LloydsAlgorithm {
 
     public void visualizeEdges(ITriangulation<Vector3Vertex, DefaultTriangulationCell<Vector3Vertex> > triangulation)
     {
+        /*  
+            
+            foreach (var edge in voronoiMesh.Edges)
+            {
+                calculateCircumsphere
+                var from = edge.Source.Circumcenter;
+                var to = edge.Target.Circumcenter;
+                drawingCanvas.Children.Add(new Line { X1 = from.X, Y1 = from.Y, X2 = to.X, Y2 = to.Y, Stroke = Brushes.Black });
+            }
+
+            foreach (var cell in voronoiMesh.Vertices)
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    if (cell.Adjacency[i] == null)
+                    {
+                        var from = cell.Circumcenter;
+                        var t = cell.Vertices.Where((_, j) => j != i).ToArray();
+                        var factor = 100 * IsLeft(t[0].ToPoint(), t[1].ToPoint(), from) * IsLeft(t[0].ToPoint(), t[1].ToPoint(), Center(cell));
+                        var dir = new Point(0.5 * (t[0].Position[0] + t[1].Position[0]), 0.5 * (t[0].Position[1] + t[1].Position[1])) - from;
+                        var to = from + factor * dir;
+                        drawingCanvas.Children.Add(new Line { X1 = from.X, Y1 = from.Y, X2 = to.X, Y2 = to.Y, Stroke = Brushes.Black });
+                    }                    
+                }
+            }
+
+            ShowVertices(Vertices);
+            drawingCanvas.Children.Add(new Rectangle { Width = drawingCanvas.ActualWidth, Height = drawingCanvas.ActualHeight, Stroke = Brushes.Black, StrokeThickness = 3 });
+        }
+        */
+
+
+
         // visualize
         foreach (var cell in triangulation.Cells)
         {
@@ -209,60 +311,54 @@ public class LloydsAlgorithm {
         }
     }
 
+
+
+
     public void visualizeEdges(VoronoiMesh<Vector3Vertex, Tetrahedron, VoronoiEdge<Vector3Vertex, Tetrahedron>> triangulation)
     {
         // visualize
+        
         foreach (var edge in triangulation.Edges)
         {
-            var sourceCell = edge.Source;
+            Vector3 from = edge.Source.calculateCircumsphere();
+            Vector3 to = edge.Target.calculateCircumsphere();
 
-            int c = 0; Vector3 lastPos = new Vector3(0,0,0);
-
-            foreach (var vertex in sourceCell.Vertices)
-            {
-                if(c > 0) {
-                    drawLine(lastPos, vertex.toVector3(), ColorAssistant.getQualitativeColor(1));
-
-                        }
-                lastPos = vertex.toVector3();
-                c++;
-            }
+            drawLine(from, to, ColorAssistant.getDivergingColor(0));
         }
 
-        // both contain exactly 4 vertices
-        foreach (var edge in triangulation.Edges)
+        /*
+        int cellIdx = 0;
+        foreach(var cell in triangulation.Vertices)
         {
-            var sourceCell = edge.Source;
-            var targetCell = edge.Target;
-
-
-            for (int i=0; i < sourceCell.Vertices.Length; i++)
+            foreach(var neighbor in cell.Adjacency)
             {
-                    drawLine(sourceCell.Vertices[i].toVector3(), targetCell.Vertices[i].toVector3(), ColorAssistant.getQualitativeColor(2));
-            }
-        }
+                if (neighbor == null) continue;
+                Vector3 from = cell.calculateCircumsphere();
+                Vector3 to = neighbor.calculateCircumsphere();
 
-        // match via adjacency
+                drawLine(from, to, ColorAssistant.getQualitativeColor(cellIdx));
+            }
+            cellIdx++;
+        }
+        */
+
+        /*
         foreach (var cell in triangulation.Vertices)
         {
-            for (int i = 0; i < cell.Adjacency.Length; i++)
+            for (int i = 0; i < 4; i++)
             {
-                var F = cell.Adjacency[i];
-                int sharedBoundaries = 0;
-                // vertices shared with F:
-                for (int j = 0; j < cell.Vertices.Length; j++)
+                if (cell.Adjacency[i] == null)
                 {
-                    if (i != j)
-                    {
-                        sharedBoundaries++;
-                        //cell.Vertices[j]
-                    }
-
+                    Vector3 from = cell.calculateCircumsphere();
+                    var t = cell.Vertices.Where((_, j) => j != i).ToArray();
+                    float factor = 100.0f ;
+                    Vector3 dir = new Vector3((float)(0.5f * (t[0].Position[0] + t[1].Position[0])), (float)(0.5f * (t[0].Position[1] + t[1].Position[1])), (float)(0.5f * (t[0].Position[2] + t[1].Position[2]))) - from;
+                    Vector3 to = from + factor * dir;
+                    drawLine(from, to, ColorAssistant.getDivergingColor(1));
                 }
-                Debug.Log("Shared vertices: " + sharedBoundaries);
-
             }
         }
+        */
 
     }
 

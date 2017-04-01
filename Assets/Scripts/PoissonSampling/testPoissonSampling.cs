@@ -14,12 +14,14 @@ public class testPoissonSampling : MonoBehaviour {
     void Start () {
 
 
-        //PoissonSampling sampling = new GridJitterSampling2(position, size , minDist, nSamples);
-
+        //_sampling = new GridJitterSampling2(position, size , minDist, nSamples);
         _sampling = new PoissonDiskSampling2(size.x, size.y, size.z, minDist, 30, nSamples);
-
-        _sampling.sample();
+        Vector3[] samples = _sampling.sample();
         _sampling.visualize();
+
+        LloydsAlgorithm l = new LloydsAlgorithm(samples);
+
+        
     }
 	
 	// Update is called once per frame

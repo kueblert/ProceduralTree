@@ -205,6 +205,14 @@ public class PoissonDiskSampling2 : PoissonSampling
     {
         GameObject.Destroy(_visualization);
         _visualization = new GameObject("Sampling");
+
+        visualizeSamples();
+        //_grid.visualize();
+    }
+
+    private void visualizeSamples()
+    {
+
         for (int i = 0; i < _grid.nSamples; i++)
         {
             Vector3 sample = _grid.samples[i];
@@ -235,9 +243,6 @@ public class PoissonDiskSampling2 : PoissonSampling
         Color col2 = ColorAssistant.getQualitativeColor(1);
         setColor(sphere2, col2);
         sphere2.transform.SetParent(_visualization.transform);
-
-
-
-        _grid.visualize();
     }
+
 }

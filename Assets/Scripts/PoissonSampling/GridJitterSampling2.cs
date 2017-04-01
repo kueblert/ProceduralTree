@@ -188,6 +188,13 @@ public class GridJitterSampling2 : PoissonSampling
 
     public override void visualize()
     {
+
+        visualizeSamples();
+        //visualizeBoundingVolume();
+    }
+
+    private void visualizeSamples()
+    {
         foreach (Vector3 sample in _data.samples)
         {
             // draw a sphere at the sample location
@@ -209,8 +216,6 @@ public class GridJitterSampling2 : PoissonSampling
             col2.a = 70.0f / 255.0f;
             setColor(sphere2, col2);
         }
-
-        visualizeBoundingVolume();
     }
 
     /**
